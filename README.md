@@ -51,14 +51,9 @@ Reverted iterations are never deleted. The leaderboard tracks every attempt — 
 
 ## Installation
 
-```
-/plugin install auto-optimize
-```
-
-Or from source:
-
-```
-/plugin install /path/to/auto-optimize
+```bash
+claude plugin marketplace add bluuewhale/auto-optimize
+claude plugin install auto-optimize@auto-optimize
 ```
 
 ---
