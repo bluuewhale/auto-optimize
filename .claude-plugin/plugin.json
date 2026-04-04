@@ -1,6 +1,6 @@
 {
   "name": "auto-optimize",
-  "description": "Profiling-driven code optimization workflow. Builds Guard (regression tests) and Verify (benchmark) infrastructure first, then runs an autonomous optimization loop to iteratively improve measurable metrics.",
+  "description": "Profiling-driven code optimization workflow. Builds Regression Test and Benchmark Test infrastructure first, then runs an autonomous optimization loop to iteratively improve measurable metrics.",
   "author": {
     "name": "donghyungko"
   }
