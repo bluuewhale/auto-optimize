@@ -2,11 +2,11 @@
 
 **AutoResearch for Performance Engineering**
 
-> Measure first. Optimize second. Claude does the rest.
+> Measure first. Reason deep. Reflect. Repeat.
 
 Andrej Karpathy introduced the idea of [autoresearch](https://github.com/karpathy/autoresearch) — closing the loop between hypothesis, experiment, and reflection so that an AI agent can drive an entire research cycle autonomously. **auto-optimize applies that idea to performance engineering.**
 
-You define a numeric goal and a success threshold. The plugin builds regression and benchmark infrastructure, locks a baseline, then runs an autonomous loop: profile → hypothesize → apply → test → measure → reflect → repeat. Every iteration is a git commit. Every decision is reasoned and recorded.
+You define a numeric goal and a success threshold. The plugin builds regression and benchmark infrastructure, locks a baseline, then runs an autonomous loop: profile → reason → plan → apply → test → measure → reflect → repeat. Every iteration is a git commit. Every decision is reasoned, recorded, and fed back into the next cycle.
 
 ---
 
@@ -28,24 +28,68 @@ Most optimization attempts fail silently:
 |-------|-------------|--------|
 | **0. Gather** | Collects goal, scope, metric direction, and numeric success criteria | `experiment-plan.md` |
 | **1. Infra** | Builds Regression Test and Benchmark Test scripts if missing (parallel sub-agents) | `tests/` + `bench/` |
-| **1.5 Baseline** | Runs Benchmark Test on unmodified code and locks the result | `baseline/result.txt` |
-| **2. Loop** | Profiles → Plans (Opus) → Applies → Tests → Benchmarks → Keep/Revert → Reflects | `iterations/` + `leaderboard.md` |
+| **1.5 Baseline** | Locks noise-floor-validated baseline measurement and environment snapshot | `baseline/` |
+| **2. Loop** | Profile → Disassemble → Reason (Opus) → Apply → Test → Benchmark → Reflect | `iterations/` + `leaderboard.md` |
 | **3. Report** | Summarizes all iterations, best config, and recommended next steps | `final-report.md` |
 
 Every iteration is a git commit — including reverts. The full experiment history is always recoverable.
 
 ---
 
+## The Intelligence Layer
+
+Most AI coding tools apply changes and hope for the best. auto-optimize's inner loop is built differently — each iteration runs a **structured reasoning pipeline** powered by Claude Opus before a single line of code is touched.
+
+### Multi-technique Reasoning per Iteration
+
+Every iteration delegates planning to a dedicated Opus sub-agent that applies four reasoning techniques in sequence:
+
+| Technique | What It Does |
+|-----------|-------------|
+| **Step-Back** | Abstracts the bottleneck type first (CPU-bound / I/O-bound / Memory / Network) and derives general solution principles before looking at specifics |
+| **Chain-of-Thought** | Enumerates at least 3 candidate approaches with explicit trade-off analysis, then argues for the chosen strategy with an expected improvement estimate |
+| **Self-Consistency** | Re-evaluates all candidates independently, as if seeing them for the first time — selects only the strategy that wins both evaluations |
+| **Pre-mortem** | Assumes the chosen strategy already failed and writes the post-mortem — identifying the most likely failure mode and the early signal that would confirm it |
+
+This isn't prompt engineering for show. It's a guard against the most common failure mode of autonomous agents: **plausible-sounding decisions that haven't been stress-tested.**
+
+### Deep Profiling + Disassembly Analysis
+
+Before planning, the executor sub-agent re-profiles the current codebase to detect whether the bottleneck has shifted from the previous iteration. When source-level analysis is insufficient — or when previous iterations show diminishing returns — it drops into **disassembly analysis**:
+
+- Native code (C/C++/Rust/Go): checks for missed SIMD vectorization, failed inlining, redundant memory ops
+- Python: `dis` module bytecode analysis to spot inefficient interpreter paths
+- JVM: `javap` bytecode inspection
+
+Findings are annotated directly into `plan.md` with specific instruction or bytecode offsets, giving the planner sub-agent ground-truth evidence rather than guesses.
+
+### Self-Evolving via Reflexion
+
+After every iteration — whether it succeeded or was reverted — the executor writes a `reflexion.md`:
+
+- What was surprising about this iteration's outcome
+- Concrete lessons for the next iteration (not vague impressions)
+- Promising unexplored directions spotted during execution
+
+The *next* iteration reads this reflexion before profiling or planning. **The agent gets smarter with each cycle**, accumulating a growing body of experiment-specific knowledge that no general-purpose AI has access to.
+
+This is the difference between an agent that runs N experiments and an agent that runs N *increasingly informed* experiments.
+
+---
+
 ## Core Principles
 
 **No measurement, no optimization.**
-The loop cannot start until both the Regression Test and Benchmark Test commands are confirmed working. Ambiguous success criteria ("as fast as possible") are rejected — a specific number is required.
+The loop cannot start until both the Regression Test and Benchmark Test commands are confirmed working. Ambiguous success criteria ("as fast as possible") are rejected — a specific number is required. Baseline measurement includes a noise-floor check: if variance across 5 runs exceeds 5%, the noise source must be identified before locking the baseline.
+
+**Plan before every touch.**
+No code is changed until a written plan exists in `plan.md`. The plan is produced by a dedicated Opus planner sub-agent using the full reasoning pipeline above — not inlined into the executor's context.
 
 **Sub-agents isolate context.**
-Each iteration runs in a dedicated sub-agent. Raw profiling output, diffs, and test logs never pollute the main context. No `/clear` needed.
+Each iteration runs in a dedicated sub-agent. Raw profiling output, disassembly, diffs, and test logs never pollute the main context. The main loop sees only a structured return value: result, delta, decision, and next hint. No `/clear` needed.
 
 **Failure is data.**
-Reverted iterations are never deleted. The leaderboard tracks every attempt — what worked, what didn't, and why.
+Reverted iterations are never deleted. The leaderboard tracks every attempt — what worked, what didn't, and why. The reflexion from a failed iteration is often more valuable than the result from a successful one.
 
 ---
 
@@ -116,14 +160,16 @@ experiments/
     tests/                    # Regression Test scripts (never modified by optimizer)
     bench/                    # Benchmark Test scripts (never modified by optimizer)
     baseline/
-      result.txt              # Initial measurement, locked before loop starts
+      result.txt              # Noise-floor-validated baseline (median of 5 runs)
+      env-snapshot.txt        # OS, runtime, dependency versions at baseline time
     iterations/
       iter-001-index-add/
         profile-snapshot.txt  # Profiler output for this iteration
-        plan.md               # Step-Back + CoT + Pre-mortem reasoning (Opus)
+        disasm-snapshot.txt   # Disassembly output (when triggered)
+        plan.md               # Step-Back + CoT + Self-Consistency + Pre-mortem (Opus)
         result.txt            # Benchmark Test output
         summary.md            # Delta vs baseline, strategy summary
-        reflexion.md          # What was learned, hints for next iteration
+        reflexion.md          # What was learned, concrete hints for next iteration
     leaderboard.md            # Ranked results, updated after every iteration
     final-report.md           # Written after loop ends
 ```
