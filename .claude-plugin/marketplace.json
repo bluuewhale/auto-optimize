@@ -1,0 +1,28 @@
+{
+  "name": "auto-optimize",
+  "owner": {
+    "name": "donghyungko"
+  },
+  "metadata": {
+    "description": "Profiling-driven code optimization plugin by donghyungko",
+    "version": "1.0.0"
+  },
+  "plugins": [
+    {
+      "name": "auto-optimize",
+      "source": "./",
+      "description": "Profiling-driven code optimization workflow. Builds Regression Test and Benchmark Test infrastructure first, then runs an autonomous optimization loop to iteratively improve measurable metrics.",
+      "version": "1.0.0",
+      "author": {
+        "name": "donghyungko"
+      },
+      "category": "development",
+      "keywords": [
+        "optimization",
+        "profiling",
+        "benchmark",
+        "performance"
+      ]
+    }
+  ]
+}
