@@ -162,6 +162,53 @@ Verify the following from sub-agent return values:
 
 Immediately after the Regression Test and Benchmark Test dry-runs pass, measure and lock the pre-optimization metric.
 
+### Noise Floor Protocol (run before locking baseline)
+
+Before accepting a baseline number, verify measurement stability:
+
+```bash
+# Run benchmark 5 times and inspect variance
+for i in 1 2 3 4 5; do <bench_cmd>; done
+```
+
+- If the spread is ≤ 5%: use the **median** of 5 runs as the baseline value
+- If the spread is > 5%: investigate noise source (background processes, JIT warm-up, GC) and re-run after mitigation
+- Record the chosen aggregation method (median / mean / p95) in `baseline/result.txt` header so every iteration uses the same method
+
+```bash
+# Example result.txt format
+# Aggregation: median of 5 runs
+# Raw: 84 83 85 82 83
+83
+```
+
+### Environment Snapshot
+
+Record the runtime environment alongside the baseline so result differences can be attributed to code changes, not environment drift:
+
+```bash
+# Save environment snapshot
+{
+  echo "=== Date ==="; date;
+  echo "=== OS ==="; uname -a;
+  echo "=== Runtime ===";
+  # Python
+  python --version 2>&1 || true;
+  # Node
+  node --version 2>&1 || true;
+  # Go
+  go version 2>&1 || true;
+  # Rust
+  rustc --version 2>&1 || true;
+  echo "=== Key dependencies ===";
+  # Python: pip freeze | head -20 (or poetry show)
+  # Node: cat package.json | grep '"dependencies"' -A 20
+  # Rust: cat Cargo.lock | grep '^name' | head -20
+} > experiments/exp-NNN-<goal>/baseline/env-snapshot.txt
+```
+
+> If the environment snapshot at a later iteration differs from baseline (e.g. runtime version changed), flag the discrepancy in summary.md before drawing conclusions.
+
 ```bash
 # Run Benchmark Test and save result
 <bench_cmd> > experiments/exp-NNN-<goal>/baseline/result.txt
@@ -172,7 +219,7 @@ Once a number is saved to `baseline/result.txt`, the baseline is locked. Every i
 
 Git commit:
 ```bash
-git add experiments/exp-NNN-<goal>/baseline/ && git commit -m "experiment(exp-NNN/baseline): record baseline measurement"
+git add experiments/exp-NNN-<goal>/baseline/ && git commit -m "experiment(exp-NNN/baseline): record baseline measurement and env snapshot"
 ```
 
 ---
@@ -236,6 +283,24 @@ STEP 2. Profile current state (re-detect hotspots)
   → Check whether the bottleneck shifted after the previous iteration's optimization
   → Save output to {exp_path}/iterations/iter-NNN-<strategy>/profile-snapshot.txt
   → If a new hotspot is found, update the "Strategies to Explore" section in experiment-plan.md
+
+  [Conditional] Disassembly analysis — trigger when:
+    (a) A hot function is identified but the source-level cause is unclear, OR
+    (b) Previous iterations show diminishing returns and low-level optimization is the next frontier
+
+  → Select the tool for the target language/runtime:
+       Native (C/C++/Rust/Go): objdump -d -M intel <binary> | grep -A 30 <function>
+                               cargo-asm <crate::module::fn>  (Rust)
+                               go tool objdump -s <pkg.fn> <binary>  (Go)
+       Python:                 python -c "import dis, <module>; dis.dis(<module>.<fn>)"
+       JVM (Java/Kotlin):      javap -c -p <ClassName>
+  → What to look for:
+       - SIMD/vectorization missing on numeric loops (check for xmm/ymm/zmm registers)
+       - Unexpected function call overhead (inlining not triggered)
+       - Redundant memory loads/stores inside tight loops
+       - Branch-heavy bytecode that could be restructured
+  → Save output to {exp_path}/iterations/iter-NNN-<strategy>/disasm-snapshot.txt
+  → Record findings as annotations in plan.md (reference specific instructions or bytecode offsets)
 
 STEP 3. Plan the next iteration [planner sub-agent, model=opus]
   → Delegate to oh-my-claudecode:planner (model=opus)
@@ -344,6 +409,14 @@ Proceed to Phase 3 when the specified iteration count is reached or the user sto
 - CPU-bound: multiprocessing / worker threads
 - I/O-bound: asyncio.gather / Promise.all
 
+#### F. Compiler Hints & PGO
+- Add branch prediction hints: `likely()`/`unlikely()` (C/C++), `[[likely]]` (C++20)
+- Mark hot functions: `__attribute__((hot))` / `#[inline(always)]` (Rust)
+- Enable Profile-Guided Optimization (PGO): compile with instrumentation, run representative workload, recompile with profile data
+- Enable Link-Time Optimization (LTO): `-flto` (GCC/Clang), `lto = true` (Rust Cargo.toml)
+- Force inlining of small frequently-called functions
+- Note: verify effect via disassembly analysis (STEP 2) after applying
+
 ---
 
 ### leaderboard.md Format
@@ -396,7 +469,7 @@ Phase 2:   Optimization loop (executor sub-agent × N iterations)
            [main context] launch executor sub-agent → receive return value → update leaderboard.md
            [executor sub-agent internals]
              STEP 1:  Analyze past records (leaderboard.md + git log)
-             STEP 2:  Re-profile current state → re-detect hotspots
+             STEP 2:  Re-profile current state → re-detect hotspots → [conditional] disassembly analysis
              STEP 3:  planner sub-agent (opus) → write plan.md
              STEP 4:  Apply optimization
              STEP 5:  Run Regression Test (fail → Revert → STEP 3)
