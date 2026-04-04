@@ -89,7 +89,7 @@ No code is changed until a written plan exists in `plan.md`. The plan is produce
 Each iteration runs in a dedicated sub-agent. Raw profiling output, disassembly, diffs, and test logs never pollute the main context. The main loop sees only a structured return value: result, delta, decision, and next hint. No `/clear` needed.
 
 **Failure is data.**
-Reverted iterations are never deleted. The leaderboard tracks every attempt — what worked, what didn't, and why. The reflexion from a failed iteration is often more valuable than the result from a successful one.
+Every attempt is recorded — including the ones that didn't make the cut. The leaderboard tracks what worked, what didn't, and why. The reflexion from a failed iteration is often more valuable than the result from a successful one.
 
 ---
 
@@ -141,10 +141,10 @@ Last updated: 2026-04-04
 
 | Rank | Iteration              | Result | Delta  | Strategy                    | Status     |
 |------|------------------------|--------|--------|-----------------------------|------------|
-| 1    | iter-003-query-cache   | 178ms  | -162ms | Cache repeated DB lookups   | ✅ Keep 🎯 |
-| 2    | iter-001-index-add     | 295ms  | -45ms  | Add composite index         | ✅ Keep    |
+| 1    | iter-003-query-cache   | 178ms  | -162ms | Cache repeated DB lookups   | ✅ 🎯      |
+| 2    | iter-001-index-add     | 295ms  | -45ms  | Add composite index         | ✅          |
 | 3    | baseline               | 340ms  | —      | —                           | Baseline   |
-| 4    | iter-002-async-io      | 360ms  | +20ms  | Async conversion (backfired)| ❌ Revert  |
+| 4    | iter-002-async-io      | 360ms  | +20ms  | Async conversion (backfired)| ❌          |
 ```
 
 ---
