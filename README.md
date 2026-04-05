@@ -8,6 +8,42 @@ Andrej Karpathy introduced the idea of [autoresearch](https://github.com/karpath
 
 You define a numeric goal and a success threshold. The plugin builds regression and benchmark infrastructure, locks a baseline, then runs an autonomous loop: profile → reason → plan → apply → test → measure → reflect → repeat. Every iteration is a git commit. Every decision is reasoned, recorded, and fed back into the next cycle.
 
+## Installation
+
+```bash
+claude plugin marketplace add bluuewhale/auto-optimize
+claude plugin install auto-optimize@auto-optimize
+```
+
+---
+
+## Quick Start
+
+```
+/auto-optimize
+```
+
+Then describe your optimization goal:
+
+```
+"The API p99 latency is 340ms, I want to get it under 200ms"
+"Reduce the main bundle size by at least 30%"
+"Improve test coverage for the auth module from 45% to 80%"
+```
+
+Claude will ask up to 4 questions at a time to collect:
+
+| Question | Example Answer |
+|----------|---------------|
+| What metric to improve? | `p99 latency (ms), lower is better` |
+| Which files are in scope? | `backend/app/services/*.py` |
+| Overall success target? | `≤ 200ms` |
+| Per-iteration minimum gain? | `at least 10ms improvement to keep a change` |
+| Regression Test command? | `pytest tests/` or `none` |
+| Benchmark Test command? | `python bench.py` or `none` |
+
+If either command is missing, auto-optimize writes it for you before starting the loop.
+
 ---
 
 ## The Problem
@@ -123,44 +159,6 @@ Each iteration runs in a dedicated sub-agent. Raw profiling output, disassembly,
 
 **Failure is data.**
 Every attempt is recorded — including the ones that didn't make the cut. The leaderboard tracks what worked, what didn't, and why. The reflexion from a failed iteration is often more valuable than the result from a successful one.
-
----
-
-## Installation
-
-```bash
-claude plugin marketplace add bluuewhale/auto-optimize
-claude plugin install auto-optimize@auto-optimize
-```
-
----
-
-## Quick Start
-
-```
-/auto-optimize
-```
-
-Then describe your optimization goal:
-
-```
-"The API p99 latency is 340ms, I want to get it under 200ms"
-"Reduce the main bundle size by at least 30%"
-"Improve test coverage for the auth module from 45% to 80%"
-```
-
-Claude will ask up to 4 questions at a time to collect:
-
-| Question | Example Answer |
-|----------|---------------|
-| What metric to improve? | `p99 latency (ms), lower is better` |
-| Which files are in scope? | `backend/app/services/*.py` |
-| Overall success target? | `≤ 200ms` |
-| Per-iteration minimum gain? | `at least 10ms improvement to keep a change` |
-| Regression Test command? | `pytest tests/` or `none` |
-| Benchmark Test command? | `python bench.py` or `none` |
-
-If either command is missing, auto-optimize writes it for you before starting the loop.
 
 ---
 
