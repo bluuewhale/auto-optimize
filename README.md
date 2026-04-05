@@ -36,6 +36,39 @@ Every iteration is a git commit — including reverts. The full experiment histo
 
 ---
 
+## Real-World Result: 27% Faster Hash Table
+
+> Full write-up: [HashSmith Part 3 — I Automated My Way to a 27% Faster Hash Table](https://bluuewhale.github.io/posts/i-automated-my-way-to-a-27-percent-faster-hash-table/)
+
+[HashSmith](https://github.com/bluuewhale/hash-smith) is an open-source high-performance hash table for the JVM — a SwissTable-style map built around SWAR probing and 8-byte control word groups. After two rounds of manual optimization, the author handed the profiler to auto-optimize.
+
+**One prompt. ~3 hours. No manual intervention.**
+
+```
+/auto-optimize I want to optimize the get/put performance of the SwissMap implementation.
+```
+
+| | |
+|---|---|
+| Experiments run | 5 |
+| Optimizations landed | 3 |
+| Dropped | 2 |
+| Improvement vs baseline | **13–32% across all 8 benchmark scenarios** |
+
+### What the agent found
+
+The agent ran 5 experiments autonomously. Three compounding wins, in order:
+
+1. **Tombstone guard** — the probe loop was carrying tombstone-handling logic on a path where tombstones essentially never exist in production. Splitting into two specialized loop bodies eliminated the dead weight. Put path: **-19% to -45%**.
+
+2. **ILP hoisting on the read path** — `emptyMask` was being computed after the key-equality loop, creating a serial dependency. Moving it adjacent to `eqMask` let the CPU's out-of-order engine pipeline both SWAR operations in the same clock cycle. Get path: **-11% to -36%**.
+
+3. A third, smaller improvement compounded on top of both.
+
+None of these required a single line of code written by the author. The structured reasoning pipeline (Step-Back → CoT → Self-Consistency → Pre-mortem) found the tombstone fast path by asking *what is this loop doing that it doesn't need to do?* — a question that wasn't visible in the disassembly alone.
+
+---
+
 ## The Intelligence Layer
 
 Most AI coding tools apply changes and hope for the best. auto-optimize's inner loop is built differently — each iteration runs a **structured reasoning pipeline** powered by Claude Opus before a single line of code is touched.
@@ -146,39 +179,6 @@ Last updated: 2026-04-04
 | 3    | baseline               | 340ms  | —      | —                           | Baseline   |
 | 4    | iter-002-async-io      | 360ms  | +20ms  | Async conversion (backfired)| ❌          |
 ```
-
----
-
-## Real-World Result: 27% Faster Hash Table
-
-> Full write-up: [HashSmith Part 3 — I Automated My Way to a 27% Faster Hash Table](https://bluuewhale.github.io/posts/i-automated-my-way-to-a-27-percent-faster-hash-table/)
-
-[HashSmith](https://github.com/bluuewhale/hash-smith) is an open-source high-performance hash table for the JVM — a SwissTable-style map built around SWAR probing and 8-byte control word groups. After two rounds of manual optimization, the author handed the profiler to auto-optimize.
-
-**One prompt. ~3 hours. No manual intervention.**
-
-```
-/auto-optimize I want to optimize the get/put performance of the SwissMap implementation.
-```
-
-| | |
-|---|---|
-| Experiments run | 5 |
-| Optimizations landed | 3 |
-| Dropped | 2 |
-| Improvement vs baseline | **13–32% across all 8 benchmark scenarios** |
-
-### What the agent found
-
-The agent ran 5 experiments autonomously. Three compounding wins, in order:
-
-1. **Tombstone guard** — the probe loop was carrying tombstone-handling logic on a path where tombstones essentially never exist in production. Splitting into two specialized loop bodies eliminated the dead weight. Put path: **-19% to -45%**.
-
-2. **ILP hoisting on the read path** — `emptyMask` was being computed after the key-equality loop, creating a serial dependency. Moving it adjacent to `eqMask` let the CPU's out-of-order engine pipeline both SWAR operations in the same clock cycle. Get path: **-11% to -36%**.
-
-3. A third, smaller improvement compounded on top of both.
-
-None of these required a single line of code written by the author. The structured reasoning pipeline (Step-Back → CoT → Self-Consistency → Pre-mortem) found the tombstone fast path by asking *what is this loop doing that it doesn't need to do?* — a question that wasn't visible in the disassembly alone.
 
 ---
 
