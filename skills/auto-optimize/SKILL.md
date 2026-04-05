@@ -240,7 +240,7 @@ For each iteration:
      iter_id:         "iter-003-cache-layer",
      result:          "45ms",
      delta:           "-38ms",
-     decision:        "Keep" | "Revert",
+     decision:        "Keep" | "Drop",
      success_reached: true | false,   ← whether success_target was hit
      next_hint:       "cache TTL tuning may have more headroom"
    }
@@ -334,7 +334,7 @@ STEP 4. Apply optimization
 
 STEP 5. Run Regression Test
   → Execute {test_cmd}
-  → On failure: revert changes via git checkout, record reason in plan.md,
+  → On failure: discard changes via git checkout, record reason in plan.md,
                 preserve iter-NNN/ directory, return to STEP 3
 
 STEP 6. Git commit
@@ -348,15 +348,15 @@ STEP 8. Write summary.md
   → Write {exp_path}/iterations/iter-NNN-<strategy>/summary.md
   → Include: measured value, delta_vs_baseline, strategy summary
 
-STEP 9. Keep or Revert (must compare against success criteria)
+STEP 9. Keep or Drop (must compare against success criteria)
   Decision logic:
-    A. Below iteration_threshold → Revert (even a positive delta is reverted if below minimum)
+    A. Below iteration_threshold → Drop (even a positive delta is dropped if below minimum)
     B. At or above iteration_threshold → Keep
     C. success_target reached → Keep + set success_reached: true in return value
 
-  → Keep  (improved): update leaderboard.md, git commit
-  → Revert (regressed): revert optimization changes via git checkout
-                        never delete iter-NNN/ result records
+  → Keep (improved): update leaderboard.md, git commit
+  → Drop (regressed): discard optimization changes via git checkout
+                      never delete iter-NNN/ result records
   → If success_reached: true, add "🎯 SUCCESS: Target reached" to summary.md
 
 STEP 10. Reflexion + return
@@ -371,7 +371,7 @@ STEP 10. Reflexion + return
        iter_id:         "iter-NNN-<strategy>",
        result:          "{measured value}",
        delta:           "{delta}",
-       decision:        "Keep" | "Revert",
+       decision:        "Keep" | "Drop",
        next_hint:       "{one-line next promising direction from reflexion}"
      }
 
@@ -430,7 +430,7 @@ Last updated: YYYY-MM-DD
 | 1 | iter-003-cache-layer | 45ms | -38ms | Cache query results | ✅ Keep |
 | 2 | baseline | 83ms | — | — | Baseline |
 | 3 | iter-001-index-add | 80ms | -3ms | Add DB index | ✅ Keep |
-| 4 | iter-002-async-io | 90ms | +7ms | Async conversion (no effect) | ❌ Revert |
+| 4 | iter-002-async-io | 90ms | +7ms | Async conversion (no effect) | ❌ Drop |
 ```
 
 ---
@@ -472,11 +472,11 @@ Phase 2:   Optimization loop (executor sub-agent × N iterations)
              STEP 2:  Re-profile current state → re-detect hotspots → [conditional] disassembly analysis
              STEP 3:  planner sub-agent (opus) → write plan.md
              STEP 4:  Apply optimization
-             STEP 5:  Run Regression Test (fail → Revert → STEP 3)
+             STEP 5:  Run Regression Test (fail → Drop → STEP 3)
              STEP 6:  Git commit
              STEP 7:  Run Benchmark Test → result.txt
              STEP 8:  Write summary.md
-             STEP 9:  Keep or Revert
+             STEP 9:  Keep or Drop
              STEP 10: Write reflexion.md + git commit → return to main
     ↓
 Phase 3:   Write final-report.md + git commit
@@ -487,7 +487,7 @@ Phase 3:   Write final-report.md + git commit
 - Do not modify any code before Phase 0 and experiment-plan.md are complete
 - If Regression Test or Benchmark Test dry-run fails, fix it and re-confirm — do not start the loop in an unstable state
 - `tests/` and `bench/` are never in scope for the optimization loop — exclude them explicitly
-- Iteration result directories (`iter-NNN/`) are never deleted, even after a Revert — failed attempts are data
+- Iteration result directories (`iter-NNN/`) are never deleted, even after a Drop — failed attempts are data
 - leaderboard.md is updated by the main context after every executor sub-agent return
 - `/clear` is no longer needed — sub-agent lifecycle handles context isolation
 - If an executor sub-agent fails or is interrupted, restore state from leaderboard.md and git log, then re-run from that iteration
