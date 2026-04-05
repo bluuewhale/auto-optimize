@@ -27,32 +27,6 @@ auto-optimize will ask a few clarifying questions — metric, scope, success tar
 
 ---
 
-## The Problem
-
-Most optimization attempts fail silently:
-
-- You change code, *feel* like it's faster, ship it — but never measured before or after
-- You write a quick benchmark once, optimize for it, then lose the script
-- You try five approaches, forget what you tried, and repeat the same dead-ends
-
-**auto-optimize enforces the discipline you know you should have but don't.**
-
----
-
-## How It Works
-
-| Phase | What Happens | Output |
-|-------|-------------|--------|
-| **0. Gather** | Collects goal, scope, metric direction, and numeric success criteria | `experiment-plan.md` |
-| **1. Infra** | Builds Regression Test and Benchmark Test scripts if missing (parallel sub-agents) | `tests/` + `bench/` |
-| **1.5 Baseline** | Locks noise-floor-validated baseline measurement and environment snapshot | `baseline/` |
-| **2. Loop** | Profile → Disassemble → Reason (Opus) → Apply → Test → Benchmark → Reflect | `iterations/` + `leaderboard.md` |
-| **3. Report** | Summarizes all iterations, best config, and recommended next steps | `final-report.md` |
-
-Every iteration is a git commit — including reverts. The full experiment history is always recoverable.
-
----
-
 ## Real-World Result: 27% Faster Hash Table
 
 > Full write-up: [HashSmith Part 3 — I Automated My Way to a 27% Faster Hash Table](https://bluuewhale.github.io/posts/i-automated-my-way-to-a-27-percent-faster-hash-table/)
@@ -83,6 +57,32 @@ The agent ran 5 experiments autonomously. Three compounding wins, in order:
 3. A third, smaller improvement compounded on top of both.
 
 None of these required a single line of code written by the author. The structured reasoning pipeline (Step-Back → CoT → Self-Consistency → Pre-mortem) found the tombstone fast path by asking *what is this loop doing that it doesn't need to do?* — a question that wasn't visible in the disassembly alone.
+
+---
+
+## The Problem
+
+Most optimization attempts fail silently:
+
+- You change code, *feel* like it's faster, ship it — but never measured before or after
+- You write a quick benchmark once, optimize for it, then lose the script
+- You try five approaches, forget what you tried, and repeat the same dead-ends
+
+**auto-optimize enforces the discipline you know you should have but don't.**
+
+---
+
+## How It Works
+
+| Phase | What Happens | Output |
+|-------|-------------|--------|
+| **0. Gather** | Collects goal, scope, metric direction, and numeric success criteria | `experiment-plan.md` |
+| **1. Infra** | Builds Regression Test and Benchmark Test scripts if missing (parallel sub-agents) | `tests/` + `bench/` |
+| **1.5 Baseline** | Locks noise-floor-validated baseline measurement and environment snapshot | `baseline/` |
+| **2. Loop** | Profile → Disassemble → Reason (Opus) → Apply → Test → Benchmark → Reflect | `iterations/` + `leaderboard.md` |
+| **3. Report** | Summarizes all iterations, best config, and recommended next steps | `final-report.md` |
+
+Every iteration is a git commit — including reverts. The full experiment history is always recoverable.
 
 ---
 
