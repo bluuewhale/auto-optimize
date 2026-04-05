@@ -1,6 +1,6 @@
 {
   "name": "auto-optimize",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Profiling-driven code optimization workflow. Builds Regression Test and Benchmark Test infrastructure first, then runs an autonomous optimization loop to iteratively improve measurable metrics.",
   "author": {
     "name": "donghyungko"
