@@ -79,7 +79,7 @@ exp-NNN-<goal>
 
 ## Success Criteria (BINDING — the loop does not start without these numbers)
 - Target: {overall experiment exit condition — e.g. p99 latency ≤ 200ms, bundle size 30% reduction}
-- Iteration threshold: {minimum gain to keep a change — e.g. at least 5% improvement, at least 10ms reduction}
+- Iteration threshold: {minimum gain to accept a change — e.g. at least 5% improvement, at least 10ms reduction}
 
 ## Regression Test Command
 {command, or "none"}
@@ -262,7 +262,7 @@ bench_cmd:             {Benchmark Test command}
 scope:                 {Scope paths}
 metric_direction:      "lower is better" | "higher is better"
 success_target:        {overall exit threshold — e.g. "200" (ms), "70" (%)}
-iteration_threshold:   {minimum gain to keep a change — e.g. "5%" or "10ms"}
+iteration_threshold:   {minimum gain to accept a change — e.g. "5%" or "10ms"}
 ```
 
 ### Executor Sub-agent: 10-Step Harness
@@ -304,7 +304,7 @@ STEP 2. Profile current state (re-detect hotspots)
 
 STEP 3. Plan the next iteration [planner sub-agent, model=opus]
   → Delegate to oh-my-claudecode:planner (model=opus)
-  → Inputs: profile-snapshot.txt path, leaderboard.md contents, experiment-plan.md, previous reflexion.md
+  → Inputs: profile-snapshot.txt path, disasm-snapshot.txt (if exists), leaderboard.md contents, experiment-plan.md, previous reflexion.md
   → The sub-agent applies the following reasoning techniques in order and writes plan.md directly:
 
        [Step-Back] Establish abstract principles first
@@ -334,7 +334,7 @@ STEP 4. Apply optimization
 
 STEP 5. Run Regression Test
   → Execute {test_cmd}
-  → On failure: discard changes via git checkout, record reason in plan.md,
+  → On failure: abort — discard changes via git checkout, record reason in plan.md,
                 preserve iter-NNN/ directory, return to STEP 3
 
 STEP 6. Git commit
@@ -427,10 +427,10 @@ Last updated: YYYY-MM-DD
 
 | Rank | Iteration | Result | Delta | Strategy | Status |
 |------|-----------|--------|-------|----------|--------|
-| 1 | iter-003-cache-layer | 45ms | -38ms | Cache query results | ✅ Keep |
+| 1 | iter-003-cache-layer | 45ms | -38ms | Cache query results | ✅ |
 | 2 | baseline | 83ms | — | — | Baseline |
-| 3 | iter-001-index-add | 80ms | -3ms | Add DB index | ✅ Keep |
-| 4 | iter-002-async-io | 90ms | +7ms | Async conversion (no effect) | ❌ Drop |
+| 3 | iter-001-index-add | 80ms | -3ms | Add DB index | ✅ |
+| 4 | iter-002-async-io | 90ms | +7ms | Async conversion (no effect) | ❌ |
 ```
 
 ---
@@ -463,7 +463,7 @@ Phase 1a:  Regression Test missing? → write tests in tests/ → confirm dry-ru
     ↓
 Phase 1b:  Benchmark Test missing? → write benchmark in bench/ → confirm dry-run passes
     ↓
-Phase 1.5: Save initial Benchmark Test result to baseline/ + git commit
+Phase 1.5: Noise floor check → lock baseline (median of 5 runs) + env snapshot + git commit
     ↓
 Phase 2:   Optimization loop (executor sub-agent × N iterations)
            [main context] launch executor sub-agent → receive return value → update leaderboard.md
@@ -472,7 +472,7 @@ Phase 2:   Optimization loop (executor sub-agent × N iterations)
              STEP 2:  Re-profile current state → re-detect hotspots → [conditional] disassembly analysis
              STEP 3:  planner sub-agent (opus) → write plan.md
              STEP 4:  Apply optimization
-             STEP 5:  Run Regression Test (fail → Drop → STEP 3)
+             STEP 5:  Run Regression Test (fail → abort → STEP 3)
              STEP 6:  Git commit
              STEP 7:  Run Benchmark Test → result.txt
              STEP 8:  Write summary.md
