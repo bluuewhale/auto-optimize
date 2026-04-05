@@ -343,6 +343,7 @@ STEP 6. Git commit
 STEP 7. Run Benchmark Test
   → {bench_cmd} > {exp_path}/iterations/iter-NNN-<strategy>/result.txt
   → Compare against {baseline_value} → compute delta
+  ⚠️  Benchmark runs can take up to several hours. Never set a short timeout — use no timeout or a generous one (e.g. 3–6 hours).
 
 STEP 8. Write summary.md
   → Write {exp_path}/iterations/iter-NNN-<strategy>/summary.md
@@ -491,3 +492,4 @@ Phase 3:   Write final-report.md + git commit
 - leaderboard.md is updated by the main context after every executor sub-agent return
 - `/clear` is no longer needed — sub-agent lifecycle handles context isolation
 - If an executor sub-agent fails or is interrupted, restore state from leaderboard.md and git log, then re-run from that iteration
+- Benchmark runs can take up to several hours — never set a short timeout when executing benchmark commands
