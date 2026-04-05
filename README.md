@@ -20,29 +20,10 @@ claude plugin install auto-optimize@auto-optimize
 ## Quick Start
 
 ```
-/auto-optimize
+/auto-optimize The API is slow. I want to make it faster.
 ```
 
-Then describe your optimization goal:
-
-```
-"The API p99 latency is 340ms, I want to get it under 200ms"
-"Reduce the main bundle size by at least 30%"
-"Improve test coverage for the auth module from 45% to 80%"
-```
-
-Claude will ask up to 4 questions at a time to collect:
-
-| Question | Example Answer |
-|----------|---------------|
-| What metric to improve? | `p99 latency (ms), lower is better` |
-| Which files are in scope? | `backend/app/services/*.py` |
-| Overall success target? | `≤ 200ms` |
-| Per-iteration minimum gain? | `at least 10ms improvement to keep a change` |
-| Regression Test command? | `pytest tests/` or `none` |
-| Benchmark Test command? | `python bench.py` or `none` |
-
-If either command is missing, auto-optimize writes it for you before starting the loop.
+auto-optimize will ask a few clarifying questions — metric, scope, success target, and test commands — then take it from there. If benchmarks or regression tests are missing, it writes them before starting the loop.
 
 ---
 
